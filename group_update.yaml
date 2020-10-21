@@ -13,13 +13,13 @@
 
   - name: Create Group
     group:
-      name: ets_dev
+      name: admin
       state: present
 
   - name: adding existing user '{{ user }}' to group ets_dev
     user:
       name: '{{ item }}'
-      groups: ets_dev
+      groups: admin
       state: present
     loop:
     - Tom
