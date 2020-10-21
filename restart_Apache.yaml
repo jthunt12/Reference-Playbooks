@@ -4,7 +4,7 @@
 #
 #  This application is used to restart apache client for all servers specified.
 #
-#  Run as: ansible-playbook restart_Apwche.yml
+#  Run as: ansible-playbook restart_Apache.yml
 #     
 ############################################################################
 
