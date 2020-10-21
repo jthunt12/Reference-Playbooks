@@ -16,7 +16,7 @@
       name: admin
       state: present
 
-  - name: adding existing user '{{ user }}' to group ets_dev
+  - name: adding existing user '{{ user }}' to group admin
     user:
       name: '{{ item }}'
       groups: admin
