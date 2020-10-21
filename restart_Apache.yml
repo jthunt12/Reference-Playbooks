@@ -1,0 +1,35 @@
+---
+###########################################################################
+#  How to use:
+#
+#  This application is used to restart apache client for all servers specified.
+#
+#  Run as: ansible-playbook restart_Apwche.yml
+#     
+############################################################################
+
+- hosts: "{{hostName}}"
+
+  vars_prompt:  
+
+  - name: ansible_ssh_pass
+    prompt: Remote user password
+    private: yes
+
+  - name: hostName
+    prompt: 'host(s):'
+    private: no
+
+  become: yes
+
+  tasks:
+    - name: Restart Apache
+      service:
+        name: httpd
+        state: restarted
+
+    - name: Ensure Apache is restarted
+      service:
+        name: httpd
+        state: started
+        enabled: yes

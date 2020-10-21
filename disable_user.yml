@@ -1,0 +1,102 @@
+---
+- hosts: "{{hostName}}"
+
+  vars_prompt:  
+
+  - name: ansible_ssh_pass
+    prompt: Remote user password
+    private: yes
+
+  - name: hostName
+    prompt: 'HostName:'
+    private: no
+
+  - name: user
+    prompt: 'Select User to Remove:'
+    private: no
+
+  - name: move_files
+    prompt: 'Would you like to copy user files to "/tmp/." [y/n]?'
+    private: no
+
+  vars:
+    ansible_become_pass: '{{ ansible_ssh_pass }}'
+  become: yes
+
+  tasks:
+  
+  - name: Get cron jobs for {{ user }}
+    command: "crontab -u {{ user }} -l"
+    register: users_crons  
+    ignore_errors: yes
+
+  - debug: 
+      msg: "{{ users_crons.stderr if users_crons.stderr|length > 0 else users_crons.stdout }}"
+
+  - name: Checking Directories
+    file:
+      path: /tmp/removed_users
+      state: directory
+
+  - name: Creating User Folders
+    file:
+      path: /tmp/removed_users/removed_user_{{user}}
+      state: directory
+    when: move_files != 'n'
+
+  - name: Copying {{ user }} Files from /home
+    shell: 
+      cmd: find /home -user {{ user }} -exec cp -vp {} /tmp/removed_users/removed_user_{{ user }} \;
+    ignore_errors: yes
+    when: move_files != 'n'
+
+  - name: Copying {{ user }} Files from /opt
+    shell: 
+      cmd: find /opt -user {{ user }} -exec cp -vp {} /tmp/removed_users/removed_user_{{ user }} \;
+    ignore_errors: yes
+    when: move_files != 'n'
+
+  - name: Copying {{ user }} Files from /var
+    shell: 
+      cmd: find /var -user {{ user }} -exec cp -vp {} /tmp/removed_users/removed_user_{{ user }} \;
+    ignore_errors: yes
+    when: move_files != 'n'
+
+  - name: Archiving files
+    archive:
+      path: /tmp/removed_users/removed_user_{{ user }}
+      dest: /tmp/removed_users/removed_user_{{ user }}.tgz
+      remove: yes
+    when: move_files != 'n'
+
+  - name: Securing file permissions for /tmp/removed_user_{{user}}
+    file:
+      path: /tmp/removed_users/removed_user_{{user}}.tgz
+      owner: root
+      group: root
+      mode: '0700'
+    when: move_files != 'n'
+
+  - name: Removing old files in /tmp
+    file:
+      path: /tmp/removed_users/removed_user_{{user}}
+      state: absent
+    when: move_files != 'n'
+
+  - name: Admin confirmation
+    pause: prompt='************************************************************\n*\n*          You are about to remove shell access for "{{ user }}" for all servers specified. \n*\n*          "THERE IS NO EASY WAY TO REVERSE THIS PROCESS ONCE COMPLETED". \n*\n*          Press return to continue. Press Ctrl+c and then "a" to abort\n*\n************************************************************'
+  - name: Removing shell access for {{ user }}
+    user:
+      name: "{{ user }}"
+      state: present
+      shell: /sbin/nologin
+      password_lock: yes
+
+  - name: Removing authorized keys
+    authorized_key:
+      user: "{{ user }}"
+      key: ""
+      exclusive: yes
+
+  - name: Information
+    pause: prompt='************************************************************\n*\n*          Shell access for "{{ user }}" has been removed for all servers specified. \n*\n*          "If the removed name is not added to the disabled_users list, please do so now." \n*\n*          Press return to finish script.\n*\n************************************************************'

@@ -1,0 +1,30 @@
+- hosts: "{{hostName}}"
+
+  become: true
+  become_user: root
+  become_method: sudo
+
+  vars_prompt:  
+  - name: hostName
+    prompt: 'HostName:'
+    private: no
+
+  tasks:
+
+  - name: Create Group
+    group:
+      name: ets_dev
+      state: present
+
+  - name: adding existing user '{{ user }}' to group ets_dev
+    user:
+      name: '{{ item }}'
+      groups: ets_dev
+      state: present
+    loop:
+    - Tom
+    - John
+    - Andy
+    - Ben
+    - Troy
+    - Brock

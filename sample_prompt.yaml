@@ -1,0 +1,19 @@
+- hosts: localhost
+
+  vars_prompt:
+
+  - name: username
+    prompt: what is your username?
+    private: no
+
+  - name: password
+    prompt: what is your password?
+    private: yes
+
+  - name: hostName
+    prompt: What is the name of host?
+    private: no
+
+  tasks:
+  - debug:
+      msg: 'Logging on to {{ hostName }} as {{ username }}.'

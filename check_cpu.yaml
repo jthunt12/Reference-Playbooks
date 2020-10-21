@@ -1,0 +1,18 @@
+- hosts: "{{hostName}}"
+
+  vars_prompt:
+
+  - name: ansible_ssh_pass
+    prompt: Remote user password
+    private: yes
+
+  - name: hostName
+    prompt: 'host(s):'
+    private: no
+
+  tasks:
+    - name: Count CPU's
+      shell: lscpu | grep "^CPU(s):"
+      register: cpu_count
+
+    - debug: var=cpu_count.stdout_lines

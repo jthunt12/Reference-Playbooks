@@ -1,0 +1,56 @@
+---
+###########################################################################
+#  How to use:
+#
+#  This application is used to monitor the user and sudoer access of company servers.
+#  Before use, one will need to determine the server_name(s) group_name(s) and user_name(s) for the applications ot monitor.
+#  When stating multiple users/groups, be sure to list them using "|" as a seperator. (ex. thunt|lhale|mpee)
+#  You will be asked for the prompts once you run "ansible-playbook show-sudoers.yaml"
+############################################################################
+
+- hosts: "{{hostName}}"
+
+  vars_prompt:
+
+  - name: ansible_ssh_pass
+    prompt: Remote user password
+    private: yes
+
+  - name: hostName
+    prompt: 'host(s):'
+    private: no
+
+  - name: group_name
+    prompt: 'group(s): "* for all groups" (Example --> opsteam)'
+    private: no
+
+  # - name: user_name
+  #   prompt: 'users(s): "* for all users"'
+  #   private: no
+
+  vars:
+    ansible_become_pass: '{{ ansible_ssh_pass }}'
+  become: yes
+
+  tasks:
+    - name: display Sudoers
+      shell: cat /etc/sudoers | grep -E '{{group_name}}'
+      register: run
+      ignore_errors: true
+    - debug: var=run.stdout_lines
+
+    - name: display groups
+      shell: cat /etc/group | grep -E '{{group_name}}'
+      register: run4
+      ignore_errors: true
+    - debug: var=run4.stdout_lines
+
+    # - name: display Shadow
+    #   shell: cat /etc/shadow | grep -E '{{user_name}}'
+    #   register: run2
+    # - debug: var=run2.stdout_lines
+
+    # - name: display Passwd
+    #   shell: cat /etc/passwd | grep -E '{{user_name}}'
+    #   register: run3
+    # - debug: var=run3.stdout_lines

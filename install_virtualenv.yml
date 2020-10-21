@@ -1,0 +1,132 @@
+---
+################################################################################################################################################################
+# Overview:
+# This playbook is designed to saftley check and install a python36 virtual-environment on the listed servers.
+# **Note this is recomended only for RHEL/Centos 6 OS
+#   Run as:
+#       ansible-playbook checkpython.yml --extra-vars "hostname=<name_of_server>" --ask-become
+#
+#       -Created by J. Troy Hunt Aug 2019
+################################################################################################################################################################
+# DO NOT DELETE BELOW COMMENT (NEEDED FOR FIREWALL EXCEPTION)
+################################################################################################################################################################
+# - hosts: localhost
+#
+#   tasks: 
+#  #   push python package to specified host
+#     - name: scp_package
+#       shell: scp Python-3.6.9.tgz thunt@{{ item }}:/tmp/Python-3.6.9.tgz
+#       with_items:
+#  #   list all servers from slm_temp located in /etc/ansible/hosts
+#         - "{{hostName}}"
+################################################################################################################################################################
+
+#   Specify hosts and become root at sign-in
+- hosts: "{{ hostName }}"
+  become: true
+  become_user: root
+  become_method: sudo
+
+  tasks:
+
+#   Install the following YUM packages from satellite
+    - name: install gcc, zlib, and openssl
+      yum:
+        name: "{{ packages }}"
+        state: present
+      vars:
+        packages:
+        - gcc
+        - zlib-devel
+        - openssl-devel
+
+#   List all python application in /usr/bin
+    - name: check python version
+      shell: ls -l /usr/bin/ | grep python
+      register: python_version
+    - debug: var=python_version.stdout_lines
+
+#   List Red Hat Release
+    - name: check rhel version
+      shell: cat /etc/redhat-release; mv /tmp/Python-3.6.9.tgz /usr/src/Python-3.6.9.tgz
+      register: red_hat
+    - debug: var=red_hat.stdout_lines
+
+#  Run wget to grab Python-3.6.9
+    - name: Grab Python.tgz
+      get_url: 
+        url: https://www.python.org/ftp/python/3.6.9/Python-3.6.9.tgz
+        dest: /usr/src/.
+
+#   Extract to tgz to /usr/src
+    - name: Extract Python-3.6.9.tgz
+      unarchive:
+        #src: /tmp/Python-3.6.9.tgz
+        src: /usr/src/Python-3.6.9.tgz
+        dest: /usr/src/.
+        remote_src: yes
+
+#   Optimize python environment (Requires gcc) | move Python3.6 to /usr/local/bin
+    - name: run enable optimizations / create altinstall
+      shell: cd /usr/src/Python-3.6.9 && {{ item }}
+      with_items:
+        - ./configure --enable-optimizations
+        - make altinstall
+
+#   Allow program to be called from anywhere by anyone using python3        
+    - name: Create Soft-Link Python3
+      file:
+        src: "/usr/local/bin/python3.6"
+        dest: "/usr/bin/python3"
+        state: link
+
+#   Allow program to be called from anywhere by anyone using pip3
+    - name: Create Soft-Link pip3
+      file:
+        src: "/usr/local/bin/pip3.6"
+        dest: "/usr/bin/pip3"
+        state: link
+
+#   Using PIP, install virtualenv
+    - name: pip3 install virtualenv
+      shell: pip3 install virtualenv
+      register: pip_var
+    - debug: var=pip_var.stdout_lines
+
+#   Allow program to be called from anywhere by anyone using virtualenv
+    - name: Create Soft-Link Virtual_Environment
+      file:
+        src: "/usr/local/bin/virtualenv"
+        dest: "/usr/bin/virtualenv"
+        state: link
+
+#   Create directories to store virtualenv
+    - name: create virtual_environment <dir> path
+      file:
+        path: /opt/virtenv/python36_virtenv
+        state: directory
+
+#   Create virtualenv to specified <dir>
+    - name: create virtual_environment
+      shell: virtualenv /opt/virtenv/python36_virtenv
+      register: test_env
+    - debug: var=test_env.stdout_lines
+
+#   Test to ensure virtualenv is running python3.6.9
+    - name: look at virtual_environment
+      shell: ls -l /opt/virtenv/python36_virtenv/bin
+      register: test_env1
+    - debug: var=test_env1.stdout_lines
+
+#   Allow program to be called from anywhere by anyone using source /usr/bin/python36_env
+    - name: Create Soft-Link python36_env
+      file:
+        src: "/opt/virtenv/python36_virtenv/bin/activate"
+        dest: "/usr/bin/python36_env"
+        state: link
+
+#   Check to ensure all version are verified
+    - name: check python version
+      shell: echo python --version; python --version 2>&1; echo python3 --version; python3 --version; echo pip3 --version; pip3 --version; echo virtualenv --version; virtualenv --version
+      register: python_version
+    - debug: var=python_version.stdout_lines
